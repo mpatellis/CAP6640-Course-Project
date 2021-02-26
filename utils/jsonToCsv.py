@@ -7,7 +7,8 @@ import pandas as pd
 def get_args():
     cli_parse = argparse.ArgumentParser(description='Cleans and converts jsonl tweet data to csv. Will move back one directory from provided path and create out directory')
 
-    cli_parse.add_argument('Path', metavar='path', type=str, help='Path to either the file or directory')
+    cli_parse.add_argument('Path', type=str, help='Path to either the input file or directory')
+    cli_parse.add_argument('-o', action='store', help='Path for output directory. If None then output will be "Path/../processed_tweets"')
     cli_parse.add_argument('-rt', action='store_true', help='If included will remove retweets')
     cli_parse.add_argument('-s', action='store_true', help='Include if path is a single file. Will place the resulting csv.gz wherever this script is run from.')
 
@@ -65,13 +66,16 @@ def main():
     path = args.Path
     clean_rt = args.rt
     single_file = args.s
+    out_path = args.o
 
     if single_file:
         process_single_file(path, clean_rt, None)
         return
+    
+    if out_path == None:
+        out_path = os.path.join(path, '../processed_tweets')
 
     try:
-        out_path = os.path.join(path, '../processed_tweets')
         os.makedirs(out_path, exist_ok=True)
     except OSError as error:
         print(error)
