@@ -1,8 +1,8 @@
 s3 = boto3.resource(
     service_name='s3',
     region_name='us-east-2',
-    aws_access_key_id='AKIAZCIFP3PAYQQDIKFY',
-    aws_secret_access_key='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'
+    aws_access_key_id='',
+    aws_secret_access_key=''
 )
 
 for bucket in s3.buckets.all():
