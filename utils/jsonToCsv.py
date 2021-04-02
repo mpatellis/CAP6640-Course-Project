@@ -1,6 +1,6 @@
 import argparse
 import gzip
-import os
+import os, sys
 import pandas as pd
 
 # Sets up the arguments for the file. Use -h for info
@@ -24,7 +24,7 @@ def dropCols(df):
 # Removes actual retweets. Checks for retweeted_status in the dataframe
 def removeRT(df):
     try:
-        df = df[df['retweeted_status'].notna()]
+        df = df[(df['retweeted_status'].isna())]
     except KeyError:
         print('No retweeted_status')
     
@@ -34,7 +34,12 @@ def removeRT(df):
 def process_single_file(path, clean_rt, out_path):
     filename = path.split('/')[-1][:-9]
 
-    df = pd.read_json(path, lines=True, compression='gzip')
+    try:
+        df = pd.read_json(path, lines=True, compression='gzip')
+    except:
+        print('Error: ', sys.exc_info()[0])
+        print(path)
+        return
 
     if clean_rt:
         df = removeRT(df)
