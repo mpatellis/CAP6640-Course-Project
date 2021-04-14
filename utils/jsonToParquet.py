@@ -13,7 +13,7 @@ def get_args():
     cli_parse.add_argument('Path', type=str, help='Path to either the input file or directory')
     cli_parse.add_argument('Output_Name', type=str, help='Name of outputted file')
     cli_parse.add_argument('-s', action='store_true', help='Include if path is a single file. Will place the resulting csv.gz wherever this script is run from.')
-    cli_parse.add_argument('Num_Threads', type=int, help='Number of threads for reading')
+    cli_parse.add_argument('Num_Threads', type=int, help='Number of threads for reading. Set to -1 for no mulithreading - RECOMMENDED')
 
     return cli_parse.parse_args()
 
@@ -74,8 +74,7 @@ def process_files(files, path):
         df = pd.concat([df, process_single_file(f_path)], ignore_index=True)
 
         count = count + 1
-        if count > n/2:
-            print('Halfway')
+        print('Completed %d out of %d' % (count, n))
     
     print('Complete')
     return df
@@ -97,29 +96,33 @@ def main():
         if file.endswith('.jsonl.gz'):
             files.append(file)
 
-    num_files_per = len(files) // num_threads
-    num_leftover = len(files) % num_threads
-    list_num_files = []
+    if num_threads == -1:
+        df = process_files(files, path)
+    else:
 
-    for i in range(num_threads):
-        list_num_files.append(num_files_per)
-        if num_leftover != 0:
-            list_num_files[-1] = list_num_files[-1] + 1
-            num_leftover = num_leftover - 1
-    
-    file_list = []
-    start_index = 0
-    for i in range(len(list_num_files)):
-        end_index = start_index + list_num_files[i]
-        file_list.append(files[start_index:end_index])
-        start_index = end_index
+        num_files_per = len(files) // num_threads
+        num_leftover = len(files) % num_threads
+        list_num_files = []
 
-    df_list = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [executor.submit(process_files, f, path) for f in file_list]
-        df_list = [f.result() for f in futures]
+        for i in range(num_threads):
+            list_num_files.append(num_files_per)
+            if num_leftover != 0:
+                list_num_files[-1] = list_num_files[-1] + 1
+                num_leftover = num_leftover - 1
+        
+        file_list = []
+        start_index = 0
+        for i in range(len(list_num_files)):
+            end_index = start_index + list_num_files[i]
+            file_list.append(files[start_index:end_index])
+            start_index = end_index
 
-    df = pd.concat(df_list, ignore_index=True)
+        df_list = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(process_files, f, path) for f in file_list]
+            df_list = [f.result() for f in futures]
+
+        df = pd.concat(df_list, ignore_index=True)
 
     df.to_parquet(output_name, compression='snappy')
 
